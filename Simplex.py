@@ -268,7 +268,8 @@ def init_params(A, b, c, type):
     return A, b, c
 
 
-""" If using command line input, all Example variables should be commented out.
+if __name__ == "__main__":
+    """ If using command line input, all Example variables should be commented out.
 
     If using Example premade inputs uncomment one set of them and comment out the block below.
 
@@ -276,122 +277,113 @@ def init_params(A, b, c, type):
     Uncomment Shortcut: Ctrl + k + u
     """
 
+    # -------------------------------------------------------------------------------------------------------------------- #
 
-# -------------------------------------------------------------------------------------------------------------------- #
+    while True:
+        type = str(input("Would you like to minimise or maximise? (max / min).")).lower()
+        if type in ['max', 'min']:
+            break
+    obj_coeff, constraints, bounds = get_input()
+    A, b, c = init_params(constraints, bounds, obj_coeff, type)
 
+    # -------------------------------------------------------------------------------------------------------------------- #
 
-# while True:
-#     type = str(input("Would you like to minimise or maximise? (max / min).")).lower()
-#     if type in ['max', 'min']:
-#         break
-# obj_coeff, constraints, bounds = get_input()
-# A, b, c = init_params(constraints, bounds, obj_coeff, type)
+    # Example Problem 1 - (Required Problem)
 
+    # type = 'max'
+    # A = np.array([[1., -1.,  2.,  0.,  1.,  1.,  0.,  0.,  0.,  1.],
+    #               [0.,  1., -1.,  1.,  0.,  3.,  1.,  0.,  0.,  0.],
+    #               [1.,  1., -3.,  1.,  1.,  0.,  0.,  1.,  0.,  0.],
+    #               [1., -1.,  0.,  0.,  1.,  1.,  0.,  0.,  1.,  0.]])
+    # b = np.array([18., 8., 36., 23.])
+    # c = np.array([2.+0.j, 3.+0.j, 4.+0.j, 1.+0.j, 8.+0.j, 1.+0.j, 0.+0.j, 0.+0.j, 0.+0.j, 0.-1.j])
 
-# -------------------------------------------------------------------------------------------------------------------- #
+    # -------------------------------------------------------------------------------------------------------------------- #
 
+    # Example Problem 2 - (All using the same constraints, taking from PS2 Answers since he switched the min/max)
 
-# Example Problem 1 - (Required Problem)
+    # A = np.array([[1., 2., -2., 4., 1., 0., 0.],
+    #               [2., -1., 1., 2., 0., 1., 0.],
+    #               [4., -2., 1., -1., 0., 0., 1.]])
+    # b = np.array([40., 8., 10.])
 
-# type = 'max'
-# A = np.array([[1., -1.,  2.,  0.,  1.,  1.,  0.,  0.,  0.,  1.],
-#               [0.,  1., -1.,  1.,  0.,  3.,  1.,  0.,  0.,  0.],
-#               [1.,  1., -3.,  1.,  1.,  0.,  0.,  1.,  0.,  0.],
-#               [1., -1.,  0.,  0.,  1.,  1.,  0.,  0.,  1.,  0.]])
-# b = np.array([18., 8., 36., 23.])
-# c = np.array([2.+0.j, 3.+0.j, 4.+0.j, 1.+0.j, 8.+0.j, 1.+0.j, 0.+0.j, 0.+0.j, 0.+0.j, 0.-1.j])
+    # 2a.
+    # type = 'min'
+    # c = np.array([2.+0.j, 1.+0.j, -3.+0.j, 5.+0.j, 0.+0.j, 0.+0.j, 0.+0.j])
 
-# -------------------------------------------------------------------------------------------------------------------- #
+    # 2b.
+    # type = 'min'
+    # c = np.array([3.+0.j, -1.+0.j, 3.+0.j, 4.+0.j, 0.+0.j, 0.+0.j, 0.+0.j])
 
+    # 2c.
+    # type = 'max'
+    # c = np.array([5.+0.j, -4.+0.j, 6.+0.j, -8.+0.j, 0.+0.j, 0.+0.j, 0.+0.j])
 
-# Example Problem 2 - (All using the same constraints, taking from PS2 Answers since he switched the min/max)
+    # 2d.
+    # type = 'max'
+    # c = np.array([-4.+0.j, 6.+0.j, -2.+0.j, 4.+0.j, 0.+0.j, 0.+0.j, 0.+0.j])
 
+    # -------------------------------------------------------------------------------------------------------------------- #
 
-# A = np.array([[1., 2., -2., 4., 1., 0., 0.],
-#               [2., -1., 1., 2., 0., 1., 0.],
-#               [4., -2., 1., -1., 0., 0., 1.]])
-# b = np.array([40., 8., 10.])
+    # Example Problem 3 - (Unbounded)
 
+    # type = 'max'
+    # A = np.array([[1., -2.,  1.,  0.,  0.,  0.],
+    #               [1.,  0.,  0.,  1.,  0.,  0.],
+    #               [0.,  1.,  0.,  0., -1.,  1.]])
 
-# 2a.
-# type = 'min'
-# c = np.array([2.+0.j, 1.+0.j, -3.+0.j, 5.+0.j, 0.+0.j, 0.+0.j, 0.+0.j])
+    # b = np.array([6., 10., 1.])
 
-# 2b.
-# type = 'min'
-# c = np.array([3.+0.j, -1.+0.j, 3.+0.j, 4.+0.j, 0.+0.j, 0.+0.j, 0.+0.j])
+    # c = np.array([3.+0.j, 5.+0.j, 0.+0.j, 0.+0.j, 0.+0.j, 0.+1.j])
 
-# 2c.
-# type = 'max'
-# c = np.array([5.+0.j, -4.+0.j, 6.+0.j, -8.+0.j, 0.+0.j, 0.+0.j, 0.+0.j])
+    # -------------------------------------------------------------------------------------------------------------------- #
 
-# 2d.
-# type = 'max'
-# c = np.array([-4.+0.j, 6.+0.j, -2.+0.j, 4.+0.j, 0.+0.j, 0.+0.j, 0.+0.j])
+    # Example Problem 4 - (Unfeasible)
 
-# -------------------------------------------------------------------------------------------------------------------- #
+    # type = 'max'
+    # A = np.array([[1., 1., 1., 0., 0.],
+    #               [0., 1., 0., -1., 1,]])
+    # b = np.array([5., 8.])
+    # c = np.array([6.+0j, 4.+0j, 0.+0j, 0.+0j, 0.-1j])
 
-# Example Problem 3 - (Unbounded)
+    # -------------------------------------------------------------------------------------------------------------------- #
 
-# type = 'max'
-# A = np.array([[1., -2.,  1.,  0.,  0.,  0.],
-#               [1.,  0.,  0.,  1.,  0.,  0.],
-#               [0.,  1.,  0.,  0., -1.,  1.]])
+    # Random example
 
-# b = np.array([6., 10., 1.])
+    # type = 'min'
+    # A = np.array([[-1.,  21., 903.,   1.,   1.,   0.,   0.,   0.],
+    #               [100.,  32.,  10., -21.,   0.,  -1.,   1.,   0.],
+    #               [3., 201., -23.,   0.,   0.,   0.,   0.,   1.]])
 
-# c = np.array([3.+0.j, 5.+0.j, 0.+0.j, 0.+0.j, 0.+0.j, 0.+1.j])
+    # b = np.array([1.0, 100.0, 5.0])
+    # c = np.array([-100.-0.j,   32.-0.j,  -90.-0.j,   -1.-0.j,   -0.-0.j,   -0.-0.j, -0.-1.j,   -0.-1.j])
+    # -------------------------------------------------------------------------------------------------------------------- #
 
-# -------------------------------------------------------------------------------------------------------------------- #
+    # Leave this part alone :)
 
-# Example Problem 4 - (Unfeasible)
+    try:
+        result, coeff = simplex(A, b, c)
+    except OverflowError as e:
+        print(f"""\n\nError: There is a non-basic variable namely X{
+            e.args[0]+1}, with all constraint coefficients non-positive. Thus the problem is unbounded.""")
+        exit()
+    except ValueError as e:
+        print(f"""\n\nError: There is a artificial variable namely A{
+            e.args[0][0]+1} in the base with values greater than zero. Thus the problem is infeasible""")
+        exit()
 
-# type = 'max'
-# A = np.array([[1., 1., 1., 0., 0.],
-#               [0., 1., 0., -1., 1,]])
-# b = np.array([5., 8.])
-# c = np.array([6.+0j, 4.+0j, 0.+0j, 0.+0j, 0.-1j])
+    n, m = A.shape[0],  A.shape[1] - A.shape[0]
+    print("\n\nF* = ", result if type == 'max' else -result)
+    finalCoeff = {}
+    for i in range(1, c.shape[0]+1):
+        if i not in coeff.keys():
+            finalCoeff[i] = 0
+        else:
+            finalCoeff[i] = coeff[i]
 
-# -------------------------------------------------------------------------------------------------------------------- #
+    # Prints out the coefficients with the associated Variable names as they should appear
+    coeefStr = [f"{f'X{i}'if i <= m else f'A{c.shape[0]-i+1}' if c[i-1].imag != 0 else f'S{
+        i-m}'} = {finalCoeff[i]};" for i in range(1, c.shape[0]+1)]
+    print(f"\nX* = ({coeefStr})")
 
-# Random example
-
-type = 'min'
-A = np.array([[-1.,  21., 903.,   1.,   1.,   0.,   0.,   0.],
-              [100.,  32.,  10., -21.,   0.,  -1.,   1.,   0.],
-              [3., 201., -23.,   0.,   0.,   0.,   0.,   1.]])
-
-b = np.array([1.0, 100.0, 5.0])
-c = np.array([-100.-0.j,   32.-0.j,  -90.-0.j,   -1.-0.j,   -0.-0.j,   -0.-0.j, -0.-1.j,   -0.-1.j])
-# -------------------------------------------------------------------------------------------------------------------- #
-
-
-# Leave this part alone :)
-
-
-try:
-    result, coeff = simplex(A, b, c)
-except OverflowError as e:
-    print(f"""\n\nError: There is a non-basic variable namely X{
-          e.args[0]+1}, with all constraint coefficients non-positive. Thus the problem is unbounded.""")
-    exit()
-except ValueError as e:
-    print(f"""\n\nError: There is a artificial variable namely A{
-          e.args[0][0]+1} in the base with values greater than zero. Thus the problem is infeasible""")
-    exit()
-
-n, m = A.shape[0],  A.shape[1] - A.shape[0]
-print("\n\nF* = ", result if type == 'max' else -result)
-finalCoeff = {}
-for i in range(1, c.shape[0]+1):
-    if i not in coeff.keys():
-        finalCoeff[i] = 0
-    else:
-        finalCoeff[i] = coeff[i]
-
-# Prints out the coefficients with the associated Variable names as they should appear
-coeefStr = [f"{f'X{i}'if i <= m else f'A{c.shape[0]-i+1}' if c[i-1].imag != 0 else f'S{
-    i-m}'} = {finalCoeff[i]};" for i in range(1, c.shape[0]+1)]
-print(f"\nX* = ({coeefStr})")
-
-# -------------------------------------------------------------------------------------------------------------------- #
+    # -------------------------------------------------------------------------------------------------------------------- #
