@@ -163,6 +163,7 @@ def simplex(
         oldP = pValues.copy()
         p1 = pValues[pivRowIndex]
 
+        # Calculate Next Tableau Iteration
         pValues[pivRowIndex] = pValues[pivRowIndex] / pivElement
         pValueIndex[pivColIndex + 1] = pValues[pivRowIndex]
         if pivColIndex in basisIndex:
@@ -176,7 +177,7 @@ def simplex(
                     A[i, j] = (
                         A[i, j] * pivElement - pivCol[i] * pivRow[j]
                     ) / pivElement
-
+        # Entering replaces Leaving variable
         basisIndex[pivRowIndex] = pivColIndex
 
     return maxP.real, pValues
@@ -384,6 +385,7 @@ def start() -> None:
     Uncomment Shortcut: Ctrl + k + u
     """
     # ---------------------------------------------------------------------------------------------------------------- #
+    # This block takes input for any problem the user wants
 
     # while True:
     #     which = str(
