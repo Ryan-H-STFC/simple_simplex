@@ -1,8 +1,11 @@
-import time
+from typing import Literal
 import numpy as np
-
+import readchar
+from rich import print
 
 """
+Notes
+
 Setup -
 
 Step 1:
@@ -22,9 +25,9 @@ Step 1:
 
 Iterations Start-
 
-Step 3:
+Step 2:
     CB Coefficients update using new basis, (Entering Variable Swaps Leaving)
-    Step 3a:
+    Step 2a:
         ? # Normalise Pivot Row by Pivot element
         Pivot Row New = Pivot Row / Pivot Element
         b[j] / Pivot Element
@@ -33,42 +36,55 @@ Step 3:
         #? corresponding value in the pivot column multiplied with the pivot row
         New Rows = Row - pivot[row] * Pivot Row
 
-    Step 3b:
+    Step 2b:
         Calculate new z[j]
         Calculate new Net Evalution CB[j] - z[j]
 
-    Step 3c:
+    Step 2c:
         If All Net Evaluation are negative Stop:
             optimal solution found
         else:
-            Repeat step 3
+            Repeat step 2
 
 """
 
 
 def simplex(
-    A: np.ndarray[np.ndarray], b: np.ndarray, c: np.ndarray, verbose: bool = False
-):
+    A: np.ndarray, b: np.ndarray, c: np.ndarray, verbose: bool = False
+) -> tuple[float, dict[float]]:
     """
-    Simplex Method Calculator
+    ``simplex``
+    -----------
+    Simplex Method Calculator, making use of complex numbers to represent the Big M in calculations.
 
     Args:
-        A (np.array[np.array]): Constraint Coefficient Matrix,  (n, m) shape
+        A (np.array): Constraint Coefficient Matrix,            (n, m) shape
         b (np.array): Constraint Values,                        (n,) shape
-        c (np.array): Objective Function Coefficients           (m,) shape
-        verbose (bool): Whether to print intermediary states of A, pValues, and BasisCoeff
+        c (np.array): Objective Function Coefficients,          (m,) shape
+        verbose (bool): Whether to print intermediary states of A, pValues, and BasisCoeff. Defaults to False.
+
+    Raises:
+        OverflowError: Used when the problem is unbounded.
+        ValueError: Used when the problem is infeasible.
+
+    Returns:
+        tuple[float, dict[str, float]]: Returns both the max/min value, along with a dictionary containing the values
+        of each variable.
     """
+
     # Check types are correct
     if not isinstance(A, np.ndarray):
-        A = np.array(A)
+        A = np.array(A, dtype=np.float64)
     if not isinstance(b, np.ndarray):
-        b = np.array(b)
+        b = np.array(b, dtype=np.float64)
     if not isinstance(c, np.ndarray):
-        c = np.array(c)
+        c = np.array(c, dtype=np.complex128)
 
     # Ensure Dimensions are Compatible
     assert A.shape[0] == b.shape[0]
     assert A.shape[1] == c.shape[0]
+
+    # Artificial Variables use imaginary values to represent Big M
     artificialBasisIndex = np.where(c.imag != 0)
     basisIndex = np.where(
         (np.sum(A == 1, axis=0) == 1) & (np.sum(A == 0, axis=0) == A.shape[0] - 1)
@@ -91,13 +107,15 @@ def simplex(
     basisIndex = basisIndex[order]
     pValueIndex = {}
     # bfs
-    pValues = b
+    pValues = b.copy()
     while True:
+
         cBasisCoeff = c[basisIndex]
         maxP = np.dot(pValues, cBasisCoeff)
         evalVars = np.array(
             [np.dot(cBasisCoeff, A.T[i]) - c[i] for i in range(c.shape[0])]
         )
+        # Magnitude of evaluation variables,
         evalVarsMagn = np.sum((evalVars.real, evalVars.imag * 1e16), axis=0)
 
         if verbose:
@@ -105,9 +123,10 @@ def simplex(
             print("\npValues:\n\n", pValues)
             print("\ncBasisCoeff:\n\n", cBasisCoeff)
 
-        pivColIndex = np.argmin(evalVarsMagn)  # Entering
+        # Entering Variable
+        pivColIndex = np.argmin(evalVarsMagn)
 
-        # Unboundedness check
+        # Unboundedness check, if all values in the pivot column are less than or equal to zero the problem is unbounded
         if (A[:, pivColIndex] <= 0).all():
             raise OverflowError(pivColIndex)
 
@@ -119,23 +138,32 @@ def simplex(
                 artBasis = basisIndex[
                     np.where(np.isin(basisIndex, artificialBasisIndex))
                 ]
-                feasibilityCheck = (A[:, artBasis] >= 0).all()
-                if feasibilityCheck:
+                infeasibilityCheck = (A[:, artBasis] >= 0).all()
+                if infeasibilityCheck:
                     raise ValueError(np.where(artBasis == artificialBasisIndex)[0])
             pValues = {p + 1: pValues[i] for i, p in enumerate(basisIndex)}
             break
-        ratio = pValues / A.T[pivColIndex]
+
+        # Find Ratio of RHS values with pivot column
+        # Ignore divide by zero error, results become infinite
+        with np.errstate(divide='ignore'):
+            ratio = np.divide(pValues, A.T[pivColIndex])
+
+        # Ignore negatives by setting at infinity
         ratio[ratio < 0] = np.inf
-        pivRowIndex = np.argmin(ratio)  # Leaving
+
+        # Leaving Variable is minimum positive of the ratios
+        pivRowIndex = np.argmin(ratio[np.where(ratio > 0)])
         pivCol = A.T[pivColIndex].copy()
         pivRow = A[pivRowIndex].copy()
         pivElement = A[pivRowIndex, pivColIndex]
 
+        # Normalise pivot row
         A[pivRowIndex] /= pivElement
         oldP = pValues.copy()
         p1 = pValues[pivRowIndex]
 
-        pValues[pivRowIndex] /= pivElement
+        pValues[pivRowIndex] = pValues[pivRowIndex] / pivElement
         pValueIndex[pivColIndex + 1] = pValues[pivRowIndex]
         if pivColIndex in basisIndex:
             c += -c[pivColIndex] * pivRow
@@ -154,7 +182,25 @@ def simplex(
     return maxP.real, pValues
 
 
-def get_input():
+def get_input() -> tuple[list[float], list[list[float]], tuple[str, float]]:
+    """
+    ``get_input``
+    -------------
+
+    Raises:
+        ValueError: Invalid input, requires positive int for number of variables.
+        ValueError: Invalid input, requires positive int for number of constaints.
+        ValueError: Invalid input, requires numerical value for constraint coefficients.
+        ValueError: Invalid input, requires numerical value for RHS.
+
+    Returns:
+        tuple[list[float], list[list[float]], tuple[str, float]]:
+        Returns the inputs Objective function coefficients,
+        the Constraint matrix,
+        and the bounds along with constraint type.
+
+    """
+
     # Step 1: Get the number of variables
     while True:
         try:
@@ -163,7 +209,7 @@ def get_input():
                 raise ValueError("\nThe number of variables must be a positive integer.\n")
             break
         except ValueError as e:
-            print(f"\nInvalid input: {e}. Please enter a valid number.\n")
+            print(f"\nInvalid input: {e}Please enter a valid number.\n")
 
     # Step 2: Get the number of constraints
     while True:
@@ -175,7 +221,7 @@ def get_input():
                 )
             break
         except ValueError as e:
-            print(f"\nInvalid input: {e}. Please enter a valid number.\n")
+            print(f"\nInvalid input: {e}Please enter a valid number.\n")
 
     constraints = []
     bounds = []
@@ -188,7 +234,7 @@ def get_input():
                 map(
                     float,
                     input(
-                        f"\nEnter the coefficients (space-separated) for variables (length {num_variables}): "
+                        f"\nEnter the objective coefficients (space-separated) for variables (length {num_variables}): "
                     ).split(),
                 )
             )
@@ -243,53 +289,85 @@ def get_input():
 
 
 def init_params(
-    A, b, c, which
-) -> tuple[np.ndarray[np.ndarray[float]], list[float], np.ndarray[float]]:
+    A: np.ndarray, b: np.ndarray, c: np.ndarray, which: Literal['max', 'min']
+) -> tuple[np.ndarray, list[float], np.ndarray]:
+    """
+    ``init_params``
+    ---------------
+
+    Args:
+        A (np.ndarray): Constraint Coefficient Matrix
+        b (np.ndarray): Constraint Values
+        c (np.ndarray): Objective Function Coefficients
+        which (Literal[&#39;max&#39;, &#39;min&#39;]): string of 'max' or 'min'. Whether to maximise or minimise.
+
+    Returns:
+        tuple[np.ndarray, list[float], np.ndarray]: A now has slack and artificial variables and has handled negative
+        constraints, b returned as just the values of the constraints after handling negatives, c is prepared with slack
+        and artificial variables.
+    """
     A = np.array(A)
     n, _ = A.shape
-    unit = np.eye(n)
+    unit = np.zeros(n)
     count = 0
-    for i, _ in enumerate(unit):
+
+    # Handle negative constraint values
+    for i, (inq, value) in enumerate(b):
+        if value < 0:
+            A[i] *= -1
+            new_value = value * -1
+            if inq == '<=':
+                new_inq = '>='
+            elif inq == '>=':
+                new_inq = '<='
+            else:
+                new_inq = '='
+            b[i] = (new_inq, new_value)
+
+    dim = A.shape[0]
+    artificial = np.zeros([dim, 1])
+    slack = np.zeros([dim, 1])
+
+    # Prep objective coefficients for artificial and slack variables
+    c = np.concatenate((np.array(c), [0]*A.shape[0]), dtype=np.complex_)
+
+    # Loop will add slack if <=,
+    # subtract slack and add artificial if >=,
+    # add artificial if =
+    for i in range(A.shape[0]):
+
         inq = b[i][0]
-        unit = unit[:, ~np.all(unit == 0, axis=0)]
-        unit[i] = np.zeros(unit.shape[1])
+        newArt = np.zeros([dim, 1])
+        newSlack = np.zeros([dim, 1])
+        if inq == '<=':
+            newSlack[i] = 1
+            slack = np.concatenate([slack, newSlack], axis=1)
 
-        if inq == ">=":
-            temp_n = unit.shape[1]
-            unit[i] = np.zeros(temp_n)
-
-            slack = np.zeros(temp_n)
-            slack[i] = -1
-            artificial = np.zeros(temp_n)
-            artificial[i] = 1
-            slack = np.array([slack, artificial])
-
+        if inq == '=':
+            newArt[i] = 1
+            artificial = np.concatenate([artificial, newArt], axis=1)
             count += 1
 
-        elif inq == "=":
-            temp_n = unit.shape[1]
-            unit[i] = np.zeros(unit.shape[1])
-            slack = np.zeros(temp_n)
-            artificial = np.zeros(temp_n)
-            artificial[i] = 1
-            slack = np.array([slack, artificial])
+        if inq == '>=':
+            newSlack[i] = -1
+            newArt[i] = 1
+            slack = np.concatenate([slack, newSlack], axis=1)
+            artificial = np.concatenate([artificial, newArt], axis=1)
+            c = np.concatenate((np.array(c), [0]), dtype=np.complex_)
             count += 1
+    unit = np.concatenate([slack, artificial], axis=1)
 
-        elif inq == "<=":
-            unit[i] = np.zeros(unit.shape[1])
-
-            slack = np.zeros(n)
-            slack[i] = 1
-            slack = np.array([slack])
-
-        unit = np.concatenate((unit, slack.T), axis=1)
+    # Remove zero columns
     unit = unit[:, ~np.all(unit == 0, axis=0)]
+    # Add slack and artificial variables to Constraints matrix
     A = np.concatenate((A, unit), axis=1)
     b = [item[1] for item in b]
-    c = np.concatenate((np.array(c), [0] * (A.shape[1] - len(c))), dtype=np.complex_)
-    for i in range(count):
-        c[-i - 1] = 0 + 1j
 
+    # Add -M represented as imaginary number for each time an artificial variable was added.
+    for i in range(count):
+        c[-i-1] = 0-1j
+
+    # If minimising swap parity of objective function coefficients
     if which == "min":
         c = -c
     return A, b, c
@@ -299,7 +377,7 @@ def start() -> None:
     """
     If using command line input, all Example variables should be commented out.
 
-    If using Example premade inputs uncomment one set of them and comment out the block below.
+    If using Example premade inputs uncomment one set of them and comment out the block below which takes inputs.
 
     VSCode Keyboard Shortcuts:
     Comment Shortcut:   Ctrl + k + c
@@ -307,30 +385,35 @@ def start() -> None:
     """
     # ---------------------------------------------------------------------------------------------------------------- #
 
-    while True:
-        which = str(
-            input("\nWould you like to minimise or maximise? (max / min): ")
-        ).lower()
-        if which in ["max", "min"]:
-            break
-    obj_coeff, constraints, bounds = get_input()
-    A, b, c = init_params(constraints, bounds, obj_coeff, which)
+    # while True:
+    #     which = str(
+    #         input("\nWould you like to minimise or maximise? (max / min): ")
+    #     ).lower()
+    #     if which in ["max", "min"]:
+    #         break
+    # obj_coeff, constraints, bounds = get_input()
+
+    # A, b, c = init_params(constraints, bounds, obj_coeff, which)
 
     # ---------------------------------------------------------------------------------------------------------------- #
 
     # Example Problem 1 - (Required Problem)
 
-    # which = 'max'
-    # A = np.array([[1., -1.,  2.,  0.,  1.,  1.,  0.,  0.,  0.,  1.],
-    #               [0.,  1., -1.,  1.,  0.,  3.,  1.,  0.,  0.,  0.],
-    #               [1.,  1., -3.,  1.,  1.,  0.,  0.,  1.,  0.,  0.],
-    #               [1., -1.,  0.,  0.,  1.,  1.,  0.,  0.,  1.,  0.]])
-    # b = np.array([18., 8., 36., 23.])
-    # c = np.array([2.+0.j, 3.+0.j, 4.+0.j, 1.+0.j, 8.+0.j, 1.+0.j, 0.+0.j, 0.+0.j, 0.+0.j, 0.-1.j])
+    # ---------------------------------------------------------------------------------------------------------------- #
+
+    which = 'max'
+    A = np.array([[1., -1.,  2.,  0.,  1.,  1.,  0.,  0.,  0.,  1.],
+                  [0.,  1., -1.,  1.,  0.,  3.,  1.,  0.,  0.,  0.],
+                  [1.,  1., -3.,  1.,  1.,  0.,  0.,  1.,  0.,  0.],
+                  [1., -1.,  0.,  0.,  1.,  1.,  0.,  0.,  1.,  0.]])
+    b = np.array([18., 8., 36., 23.])
+    c = np.array([2.+0.j, 3.+0.j, 4.+0.j, 1.+0.j, 8.+0.j, 1.+0.j, 0.+0.j, 0.+0.j, 0.+0.j, 0.-1.j])
 
     # ---------------------------------------------------------------------------------------------------------------- #
 
     # Example Problem 2 - (All using the same constraints, taking from PS2 Answers since all min)
+
+    # ---------------------------------------------------------------------------------------------------------------- #
 
     # which = 'min'
     # A = np.array([[1., 2., -2., 4., 1., 0., 0.],
@@ -357,6 +440,8 @@ def start() -> None:
 
     # Example Problem 3 - (Unbounded)
 
+    # ---------------------------------------------------------------------------------------------------------------- #
+
     # which = 'max'
     # A = np.array([[1., -2.,  1.,  0.,  0.,  0.],
     #               [1.,  0.,  0.,  1.,  0.,  0.],
@@ -370,6 +455,8 @@ def start() -> None:
 
     # Example Problem 4 - (Unfeasible)
 
+    # ---------------------------------------------------------------------------------------------------------------- #
+
     # which = 'max'
     # A = np.array([[1., 1., 1., 0., 0.],
     #               [0., 1., 0., -1., 1,]])
@@ -379,6 +466,8 @@ def start() -> None:
     # ---------------------------------------------------------------------------------------------------------------- #
 
     # Example Problem 5 - (Unbounded)
+
+    # ---------------------------------------------------------------------------------------------------------------- #
 
     # which = "min"
     # A = np.array(
@@ -397,6 +486,8 @@ def start() -> None:
 
     # Random example
 
+    # ---------------------------------------------------------------------------------------------------------------- #
+
     # which = 'min'
     # A = np.array([[-1.,  21., 903.,   1.,   1.,   0.,   0.,   0.],
     #               [100.,  32.,  10., -21.,   0.,  -1.,   1.,   0.],
@@ -404,9 +495,12 @@ def start() -> None:
 
     # b = np.array([1.0, 100.0, 5.0])
     # c = np.array([-100.-0.j,   32.-0.j,  -90.-0.j,   -1.-0.j,   -0.-0.j,   -0.-0.j, -0.-1.j,   -0.-1.j])
+
     # ---------------------------------------------------------------------------------------------------------------- #
 
     # Big Example
+
+    # ---------------------------------------------------------------------------------------------------------------- #
 
     # which = 'max'
     # A = np.array([[1., 2., 1., 3., 2., 1., 1., 1., 1., 1., 1., 0., 0., 0., 0., 0., 0., 0.],
@@ -425,19 +519,37 @@ def start() -> None:
 
     # Leave this part alone :)
 
+    # function to convert to subscript (Do not mark)
+    def get_sub(x: str) -> str:
+        """
+        Do not mark, I am using this simply for a nicer output.
+        https://www.geeksforgeeks.org/how-to-print-superscript-and-subscript-in-python/
+
+        Args:
+            x (str): str to translate to subscript
+
+        Returns:
+            str: subscripted str of x
+        """
+        normal = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-=()"
+        sub_s = "ₐ₈CDₑբGₕᵢⱼₖₗₘₙₒₚQᵣₛₜᵤᵥwₓᵧZₐ♭꜀ᑯₑբ₉ₕᵢⱼₖₗₘₙₒₚ૧ᵣₛₜᵤᵥwₓᵧ₂₀₁₂₃₄₅₆₇₈₉₊₋₌₍₎"
+        res = x.maketrans(''.join(normal), ''.join(sub_s))
+        return x.translate(res)
+
     try:
         result, coeff = simplex(A, b, c)
     except OverflowError as e:
-        print(f"""\n\nError: There is a non-basic variable namely X{
-            e.args[0]+1}, with all constraint coefficients non-positive. Thus the problem is unbounded.\n\n""")
-        start()
+        print(f"\n\nError: There is a non-basic variable namely X{get_sub(str(e.args[0]+1))}",
+              "with all constraint coefficients non-positive. Thus the problem is unbounded.\n\n")
+        exit()
+
     except ValueError as e:
-        print(f"""\n\nError: There is a artificial variable namely A{
-            e.args[0][0]+1} in the base with values greater than zero. Thus the problem is infeasible\n\n""")
-        start()
+        print(f"\n\nError: There is a artificial variable namely A{get_sub(str(e.args[0][0]+1))} in the basis with",
+              "values greater than zero. Thus the problem is infeasible.\n\n")
+        exit()
 
     m = A.shape[1] - A.shape[0]
-    print("\n\nF* = ", result if which == "max" else -result)
+    print("\n\nF* =", result if which == "max" else -result)
     finalCoeff = {}
     for i in range(1, c.shape[0] + 1):
         if i not in coeff.keys():
@@ -451,10 +563,16 @@ def start() -> None:
             i-m}'} = {finalCoeff[i]};"
         for i in range(1, c.shape[0] + 1)
     ]
-    print(f"\nX* = ({coeefStr})")
+
+    print("\nX* =", end=' ')
+    for var in coeefStr:
+        print(f"{var[0]}{get_sub(var[1])}{var[2:]}", end=' ')
+    print("\n\n")
 
     # ---------------------------------------------------------------------------------------------------------------- #
 
 
 if __name__ == "__main__":
     start()
+    print("\n\n\n\nPress any key to exit...")
+    readchar.readchar()
