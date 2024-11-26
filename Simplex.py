@@ -49,7 +49,7 @@ def simplex(
     basicIndex = np.array(range(A.shape[1] - A.shape[0]))
 
     # Remove basic variables from basis if present, case where basic variables are standard
-    basisIndex = basisIndex[~basicIndex]
+    basisIndex = basisIndex[~np.isin(basisIndex, basicIndex)]
 
     # Get the index of the first 1 in each row
     first_indices = [
@@ -351,15 +351,15 @@ def start() -> None:
     # ---------------------------------------------------------------------------------------------------------------- #
     # This block takes input for any problem the user wants
 
-    # while True:
-    #     which = str(
-    #         input("\nWould you like to minimise or maximise? (max / min): ")
-    #     ).lower()
-    #     if which in ["max", "min"]:
-    #         break
-    # obj_coeff, constraints, bounds = get_input()
+    while True:
+        which = str(
+            input("\nWould you like to minimise or maximise? (max / min): ")
+        ).lower()
+        if which in ["max", "min"]:
+            break
+    obj_coeff, constraints, bounds = get_input()
 
-    # A, b, c = init_params(constraints, bounds, obj_coeff, which)
+    A, b, c = init_params(constraints, bounds, obj_coeff, which)
 
     # ---------------------------------------------------------------------------------------------------------------- #
 
@@ -369,13 +369,13 @@ def start() -> None:
 
     # ---------------------------------------------------------------------------------------------------------------- #
 
-    which = 'max'
-    A = np.array([[1., -1.,  2.,  0.,  1.,  1.,  0.,  0.,  0.,  1.],
-                  [0.,  1., -1.,  1.,  0.,  3.,  1.,  0.,  0.,  0.],
-                  [1.,  1., -3.,  1.,  1.,  0.,  0.,  1.,  0.,  0.],
-                  [1., -1.,  0.,  0.,  1.,  1.,  0.,  0.,  1.,  0.]])
-    b = np.array([18., 8., 36., 23.])
-    c = np.array([2.+0.j, 3.+0.j, 4.+0.j, 1.+0.j, 8.+0.j, 1.+0.j, 0.+0.j, 0.+0.j, 0.+0.j, 0.-1.j])
+    # which = 'max'
+    # A = np.array([[1., -1.,  2.,  0.,  1.,  1.,  0.,  0.,  0.,  1.],
+    #               [0.,  1., -1.,  1.,  0.,  3.,  1.,  0.,  0.,  0.],
+    #               [1.,  1., -3.,  1.,  1.,  0.,  0.,  1.,  0.,  0.],
+    #               [1., -1.,  0.,  0.,  1.,  1.,  0.,  0.,  1.,  0.]])
+    # b = np.array([18., 8., 36., 23.])
+    # c = np.array([2.+0.j, 3.+0.j, 4.+0.j, 1.+0.j, 8.+0.j, 1.+0.j, 0.+0.j, 0.+0.j, 0.+0.j, 0.-1.j])
 
     # ---------------------------------------------------------------------------------------------------------------- #
 
