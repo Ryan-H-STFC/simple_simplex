@@ -46,7 +46,7 @@ def simplex(
     basisIndex = np.where(
         (np.sum(A == 1, axis=0) == 1) & (np.sum(A == 0, axis=0) == A.shape[0] - 1)
     )[0]
-    basicIndex = np.array(range(A.shape[1] - A.shape[0]))
+    basicIndex = np.array(range(c[c.real != 0].shape[0]))
 
     # Remove basic variables from basis if present, case where basic variables are standard
     basisIndex = basisIndex[~np.isin(basisIndex, basicIndex)]
@@ -63,6 +63,12 @@ def simplex(
     pValueIndex = {}
 
     # bfs
+    # Take first square matrix of A, and solve for b
+    try:
+        bfs = np.linalg.solve(A[:A.shape[0], :A.shape[0]], b)
+    except ValueError:
+        print("No BFS")
+
     pValues = b.copy()
     while True:
 
@@ -361,7 +367,7 @@ def start() -> None:
 
     A, b, c = init_params(constraints, bounds, obj_coeff, which)
 
-    # ---------------------------------------------------------------------------------------------------------------- #
+    ----------------------------------------------------------------------------------------------------------------
 
     # Required Problem
     # F* = 232.0
