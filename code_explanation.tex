@@ -1,18 +1,16 @@
 \documentclass[letterpaper, a4paper]{article}
-\usepackage{authblk}
-\usepackage{hyperref}
+
 \usepackage{geometry}
-\usepackage{lipsum}
-\usepackage{graphicx}
-\usepackage{wrapfig}
+
 \usepackage{minted}
 \usepackage{mathtools}
 
 
+\title{Simplex - Code Explanation}
+\author{Ryan Horrell}
+\date{November 2024}
 
 \begin{document}
-
-
 
 \section{Code Explanation}
 
@@ -746,9 +744,5 @@ basisIndex[pivRowIndex] = pivColIndex
 This code performs the row operations for the next tableau iteration, and updates the basis indexes by swapping the pivot row (leaving) with pivot column (entering). The next iteration begins.
 
 When the evaluation variables are all positive, and after checking for artificial variables in the final solution. We have our optimum value. This along with the final pValues are returned to be printed.
-
-
-
-
 
 \end{document}
