@@ -3,51 +3,6 @@ import numpy as np
 import readchar
 from rich import print
 
-"""
-Notes
-
-Setup -
-
-Step 1:
-    Turn Inequalities into Equalities with Slack Variables
-    A[n x m] n - constraints, m - variables
-    Basis Variables are Unit Columns
-
-    Find Objective Coefficients of the basis variables (CB)
-    z[j] = dot product of CB with columns of Z
-    Net Evalution - CB[j] - z[j]
-
-    Find Largest of net-eval,  effectively most negative z[j] set as Pivot Column  (Entering Variable)
-    Calc b-ratio -> b / ratio, if negative set as infinity
-    Pivot Row = Minimum Non-Negative b-ratio                                       (Leaving Variable)
-
-    pivot element found
-
-Iterations Start-
-
-Step 2:
-    CB Coefficients update using new basis, (Entering Variable Swaps Leaving)
-    Step 2a:
-        ? # Normalise Pivot Row by Pivot element
-        Pivot Row New = Pivot Row / Pivot Element
-        b[j] / Pivot Element
-
-        #? Aim: Pivot column elements become zero besides pivot element, for each value in a row subtract the
-        #? corresponding value in the pivot column multiplied with the pivot row
-        New Rows = Row - pivot[row] * Pivot Row
-
-    Step 2b:
-        Calculate new z[j]
-        Calculate new Net Evalution CB[j] - z[j]
-
-    Step 2c:
-        If All Net Evaluation are negative Stop:
-            optimal solution found
-        else:
-            Repeat step 2
-
-"""
-
 
 def simplex(
     A: np.ndarray, b: np.ndarray, c: np.ndarray, verbose: bool = False
@@ -86,17 +41,17 @@ def simplex(
 
     # Artificial Variables use imaginary values to represent Big M
     artificialBasisIndex = np.where(c.imag != 0)
+
+    # Basis Index finds columns that are standard, i.e. artificial/slack with single 1 and zeros elsewhere
     basisIndex = np.where(
         (np.sum(A == 1, axis=0) == 1) & (np.sum(A == 0, axis=0) == A.shape[0] - 1)
     )[0]
+    basicIndex = np.array(range(A.shape[1] - A.shape[0]))
 
-    # if first column is unitary remove from basis,
-    firstIsUnit = (np.sum(A.T[0] == 1, axis=0) == 1) & (np.sum(A.T[0] == 0, axis=0) == A.shape[0] - 1)
+    # Remove basic variables from basis if present, case where basic variables are standard
+    basisIndex = basisIndex[~basicIndex]
 
-    if firstIsUnit:
-
-        basisIndex = basisIndex[1:]
-        # Get the index of the first 1 in each row
+    # Get the index of the first 1 in each row
     first_indices = [
         np.where(row == 1)[0][0] if np.any(row == 1) else len(row)
         for row in A.T[basisIndex]
@@ -106,6 +61,7 @@ def simplex(
     order = np.argsort(first_indices)
     basisIndex = basisIndex[order]
     pValueIndex = {}
+
     # bfs
     pValues = b.copy()
     while True:
@@ -128,19 +84,27 @@ def simplex(
 
         # Unboundedness check, if all values in the pivot column are less than or equal to zero the problem is unbounded
         if (A[:, pivColIndex] <= 0).all():
-            raise OverflowError(pivColIndex)
+            finalCoeff = np.zeros(c.shape[0])
+            finalCoeff[basisIndex] = pValues
+            m = c[c.real > 0].shape[0]
+
+            coeffStr = [
+                f"{f'X{i+1}' if i < m else f'A{c.shape[0]-i}' if c[i].imag != 0 else f'S{i-m + 1}'}"
+                for i in range(0, c.shape[0])
+            ]
+            raise OverflowError(coeffStr[pivColIndex])
 
         # Infeasibility check
-        # If all Evaluation Variables are <= 0
+        # If all Evaluation Variables are greater then or equal to 0
         if (evalVarsMagn >= 0).all():
-            # If Artificial Variable is leaving the basis and all values are greater than zero
-            if np.isin(basisIndex, artificialBasisIndex).any():
-                artBasis = basisIndex[
-                    np.where(np.isin(basisIndex, artificialBasisIndex))
-                ]
-                infeasibilityCheck = (A[:, artBasis] >= 0).all()
-                if infeasibilityCheck:
-                    raise ValueError(np.where(artBasis == artificialBasisIndex)[0])
+            # If Artificial Variable are contained in the final solution the problem is infeasible
+
+            artBasis = basisIndex[
+                np.where(np.isin(basisIndex, artificialBasisIndex))
+            ]
+            infeasibilityCheck = (A[:, artBasis] > 0).any()
+            if infeasibilityCheck:
+                raise ValueError(np.where(artBasis == artificialBasisIndex)[0])
             pValues = {p + 1: pValues[i] for i, p in enumerate(basisIndex)}
             break
 
@@ -399,7 +363,9 @@ def start() -> None:
 
     # ---------------------------------------------------------------------------------------------------------------- #
 
-    # Example Problem 1 - (Required Problem)
+    # Required Problem
+    # F* = 232.0
+    # X* = X₁ = 0; X₂ = 8.0; X₃ = 0; X₄ = 0; X₅ = 26.0; X₆ = 0; S₁ = 0; S₂ = 2.0; S₃ = 5.0; A₁ = 0;
 
     # ---------------------------------------------------------------------------------------------------------------- #
 
@@ -423,18 +389,19 @@ def start() -> None:
     #               [4., -2., 1., -1., 0., 0., 1.]])
     # b = np.array([40., 8., 10.])
 
-    # 2a.
+    # 2a.       F* = -41,   X* = X₁ = 0; X₂ = 6.0; X₃ = 0; X₄ = 7.0; S₁ = 0; S₂ = 0; S₃ = 29.0;
+
     # c = -np.array([-2.+0.j, -1.+0.j, 3.+0.j, -5.+0.j, 0.+0.j, 0.+0.j, 0.+0.j])
 
-    # 2b.
+    # 2b.       (Unbounded) on X3
 
     # c = -np.array([-3.+0.j, +1.+0.j, -3.+0.j, -4.+0.j, 0.+0.j, 0.+0.j, 0.+0.j])
 
-    # 2c.
+    # 2c.       F* = -80,   X* = X₁ = 0; X₂ = 6.0; X₃ = 0; X₄ = 7.0; S₁ = 0; S₂ = 0; S₃ = 29.0;
 
     # c = -np.array([5.+0.j, -4.+0.j, 6.+0.j, -8.+0.j, 0.+0.j, 0.+0.j, 0.+0.j])
 
-    # 2d.
+    # 2d.       F* = -16.0, X* = X₁ = 1.0; X₂ = 0; X₃ = 6.0; X₄ = 0; S₁ = 51.0; S₂ = 0; S₃ = 0;
 
     # c = -np.array([-4.+0.j, 6.+0.j, -2.+0.j, 4.+0.j, 0.+0.j, 0.+0.j, 0.+0.j])
 
@@ -455,19 +422,7 @@ def start() -> None:
 
     # ---------------------------------------------------------------------------------------------------------------- #
 
-    # Example Problem 4 - (Unfeasible)
-
-    # ---------------------------------------------------------------------------------------------------------------- #
-
-    # which = 'max'
-    # A = np.array([[1., 1., 1., 0., 0.],
-    #               [0., 1., 0., -1., 1,]])
-    # b = np.array([5., 8.])
-    # c = np.array([6.+0j, 4.+0j, 0.+0j, 0.+0j, 0.-1j])
-
-    # ---------------------------------------------------------------------------------------------------------------- #
-
-    # Example Problem 5 - (Unbounded)
+    # Example Problem 4 - (Unbounded)
 
     # ---------------------------------------------------------------------------------------------------------------- #
 
@@ -486,6 +441,18 @@ def start() -> None:
 
     # ---------------------------------------------------------------------------------------------------------------- #
 
+    # Example Problem 5 - (Infeasible)
+
+    # ---------------------------------------------------------------------------------------------------------------- #
+
+    # which = 'max'
+    # A = np.array([[1., 1., 1., 0., 0.],
+    #               [0., 1., 0., -1., 1,]])
+    # b = np.array([5., 8.])
+    # c = np.array([6.+0j, 4.+0j, 0.+0j, 0.+0j, 0.-1j])
+
+    # ---------------------------------------------------------------------------------------------------------------- #
+
     # Random example
 
     # ---------------------------------------------------------------------------------------------------------------- #
@@ -500,7 +467,13 @@ def start() -> None:
 
     # ---------------------------------------------------------------------------------------------------------------- #
 
-    # Big Example
+    # Big Example -
+
+    # F* = 384.4444444444444
+    # X* = X₁ = 0; X₂ = 0; X₃ = 0; X₄ = 12.222222222222221; X₅ = 4.444444444444445; X₆ = 0; X₇ = 28.14814814814815;
+    # X₈ = 26.296296296296294; X₉ = 0; X₁0 = 0;
+    # S₁ = 0; S₂ = 0; S₃ = 35.925925925925924; S₄ = 40.0; # S₅ = 11.851851851851855; S₆ = 50.370370370370374; S₇ = 0;
+    # S₈ = 0;
 
     # ---------------------------------------------------------------------------------------------------------------- #
 
@@ -519,9 +492,22 @@ def start() -> None:
 
     # ---------------------------------------------------------------------------------------------------------------- #
 
+    # Standard Example
+
+    # ---------------------------------------------------------------------------------------------------------------- #
+
+    # which = 'max'
+    # A = np.array([[1., 0., 0., 1., 0., 0.],
+    #               [0., 1., 0., 0., 1., 0.],
+    #               [0., 0., 1., 0., 0., 1.]])
+    # b = np.array([5.0, 23.0, 3.0])
+    # c = np.array([2.+0.j, 3.+0.j, 1.+0.j, 0.+0.j, 0.+0.j, 0.+0.j])
+    # ---------------------------------------------------------------------------------------------------------------- #
+
     # Leave this part alone :)
 
     # function to convert to subscript (Do not mark)
+
     def get_sub(x: str) -> str:
         """
         Do not mark, I am using this simply for a nicer output.
@@ -541,7 +527,7 @@ def start() -> None:
     try:
         result, coeff = simplex(A, b, c)
     except OverflowError as e:
-        print(f"\n\nError: There is a non-basic variable namely X{get_sub(str(e.args[0]+1))}",
+        print(f"\n\nError: There is a non-basic variable namely {e.args[0][0]}{get_sub(str(e.args[0][1:]))}",
               "with all constraint coefficients non-positive. Thus the problem is unbounded.\n\n")
         exit()
 
@@ -549,20 +535,16 @@ def start() -> None:
         print(f"\n\nError: There is a artificial variable namely A{get_sub(str(e.args[0][0]+1))} in the basis with",
               "values greater than zero. Thus the problem is infeasible.\n\n")
         exit()
+    finalCoeff = np.zeros(c.shape[0])
+    finalCoeff = [coeff.get(i, 0) for i in range(1, c.shape[0]+1)]
 
-    m = A.shape[1] - A.shape[0]
+    m = c[c.real != 0].shape[0]
     print("\n\nF* =", result if which == "max" else -result)
-    finalCoeff = {}
-    for i in range(1, c.shape[0] + 1):
-        if i not in coeff.keys():
-            finalCoeff[i] = 0
-        else:
-            finalCoeff[i] = coeff[i]
 
     # Prints out the coefficients with the associated Variable names as they should appear
     coeefStr = [
         f"{f'X{i}'if i <= m else f'A{c.shape[0]-i+1}' if c[i-1].imag != 0 else f'S{
-            i-m}'} = {finalCoeff[i]};"
+            i-m}'} = {finalCoeff[i-1]};"
         for i in range(1, c.shape[0] + 1)
     ]
 
