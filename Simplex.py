@@ -346,7 +346,7 @@ def init_params(
 
 def start() -> None:
     """
-    If using command line input, all Example variables should be commented out.
+    If using command line input, all Example variables should be commented out, and the block below uncommented.
 
     If using Example premade inputs uncomment one set of them and comment out the block below which takes inputs.
 
