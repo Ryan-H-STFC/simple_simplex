@@ -66,7 +66,7 @@ def simplex(
     # Take first square matrix of A, and solve for b
     try:
         bfs = np.linalg.solve(A[:A.shape[0], :A.shape[0]], b)
-    except ValueError:
+    except np.linalg.LinAlgError:
         print("No BFS")
 
     pValues = b.copy()
@@ -357,17 +357,17 @@ def start() -> None:
     # ---------------------------------------------------------------------------------------------------------------- #
     # This block takes input for any problem the user wants
 
-    while True:
-        which = str(
-            input("\nWould you like to minimise or maximise? (max / min): ")
-        ).lower()
-        if which in ["max", "min"]:
-            break
-    obj_coeff, constraints, bounds = get_input()
+    # while True:
+    #     which = str(
+    #         input("\nWould you like to minimise or maximise? (max / min): ")
+    #     ).lower()
+    #     if which in ["max", "min"]:
+    #         break
+    # obj_coeff, constraints, bounds = get_input()
 
-    A, b, c = init_params(constraints, bounds, obj_coeff, which)
+    # A, b, c = init_params(constraints, bounds, obj_coeff, which)
 
-    ----------------------------------------------------------------------------------------------------------------
+    # ----------------------------------------------------------------------------------------------------------------
 
     # Required Problem
     # F* = 232.0
@@ -375,13 +375,13 @@ def start() -> None:
 
     # ---------------------------------------------------------------------------------------------------------------- #
 
-    # which = 'max'
-    # A = np.array([[1., -1.,  2.,  0.,  1.,  1.,  0.,  0.,  0.,  1.],
-    #               [0.,  1., -1.,  1.,  0.,  3.,  1.,  0.,  0.,  0.],
-    #               [1.,  1., -3.,  1.,  1.,  0.,  0.,  1.,  0.,  0.],
-    #               [1., -1.,  0.,  0.,  1.,  1.,  0.,  0.,  1.,  0.]])
-    # b = np.array([18., 8., 36., 23.])
-    # c = np.array([2.+0.j, 3.+0.j, 4.+0.j, 1.+0.j, 8.+0.j, 1.+0.j, 0.+0.j, 0.+0.j, 0.+0.j, 0.-1.j])
+    which = 'max'
+    A = np.array([[1., -1.,  2.,  0.,  1.,  1.,  0.,  0.,  0.,  1.],
+                  [0.,  1., -1.,  1.,  0.,  3.,  1.,  0.,  0.,  0.],
+                  [1.,  1., -3.,  1.,  1.,  0.,  0.,  1.,  0.,  0.],
+                  [1., -1.,  0.,  0.,  1.,  1.,  0.,  0.,  1.,  0.]])
+    b = np.array([18., 8., 36., 23.])
+    c = np.array([2.+0.j, 3.+0.j, 4.+0.j, 1.+0.j, 8.+0.j, 1.+0.j, 0.+0.j, 0.+0.j, 0.+0.j, 0.-1.j])
 
     # ---------------------------------------------------------------------------------------------------------------- #
 
@@ -451,7 +451,7 @@ def start() -> None:
 
     # ---------------------------------------------------------------------------------------------------------------- #
 
-    # which = 'max'
+    # which = 'min'
     # A = np.array([[1., 1., 1., 0., 0.],
     #               [0., 1., 0., -1., 1,]])
     # b = np.array([5., 8.])
