@@ -62,14 +62,8 @@ def simplex(
     basisIndex = basisIndex[order]
     pValueIndex = {}
 
-    # bfs
-    # Take first square matrix of A, and solve for b
-    try:
-        bfs = np.linalg.solve(A[:A.shape[0], :A.shape[0]], b)
-    except np.linalg.LinAlgError:
-        print("No BFS")
-
     pValues = b.copy()
+
     while True:
 
         cBasisCoeff = c[basisIndex]
@@ -531,7 +525,7 @@ def start() -> None:
         return x.translate(res)
 
     try:
-        result, coeff = simplex(A, b, c)
+        result, coeff = simplex(A, b, c, True)
     except OverflowError as e:
         print(f"\n\nError: There is a non-basic variable namely {e.args[0][0]}{get_sub(str(e.args[0][1:]))}",
               "with all constraint coefficients non-positive. Thus the problem is unbounded.\n\n")
